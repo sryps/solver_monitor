@@ -12,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/msalopek/solver_monitor/http"
 	"github.com/msalopek/solver_monitor/monitor"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -81,6 +82,13 @@ func main() {
 
 	monitor := monitor.NewMonitor(db, cfg, &log.Logger, API_URL)
 
+	chainConfig := http.Chain{
+		ChainID: "osmosis-1",
+		SolverAddress: *solverAddress,
+	}
+	http.HttpServer(db, chainConfig)
+	
+
 	// this can be done via subcommands
 	if *loadFromFile != "" {
 		log.Logger.Info().Str("file", *loadFromFile).Msg("loading orders from file")
@@ -106,6 +114,8 @@ func main() {
 	// there's no do while loop in go, so we just run the orders once
 	monitor.RunOrders(*solverAddress, *contractAddress, *saveRawResponses)
 
+	
+
 	ticker := time.NewTicker(time.Duration(*interval) * time.Minute)
 	defer ticker.Stop()
 
@@ -121,5 +131,4 @@ func main() {
 			return
 		}
 	}
-
 }
