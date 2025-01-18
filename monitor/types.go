@@ -2,6 +2,11 @@ package monitor
 
 import "time"
 
+type FeeAmount struct {
+    Denom  string `json:"denom"`
+    Amount int64 `json:"amount"`
+}
+
 type FillOrderEnvelope struct {
 	FillOrder *OrderEnvelope `json:"fill_order"`
 }
@@ -19,6 +24,7 @@ type FastTransferOrder struct {
 	Nonce             uint32 `json:"nonce"`
 	SourceDomain      uint32 `json:"source_domain"`
 	DestinationDomain uint32 `json:"destination_domain"`
+	FeeAmount		  FeeAmount `json:"fee_amount"`
 	TimeoutTimestamp  uint64 `json:"timeout_timestamp"`
 	Data              string `json:"data,omitempty"`
 }

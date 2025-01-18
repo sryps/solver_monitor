@@ -27,6 +27,25 @@ func InitArbitrumTxFeesDB(db *sql.DB) {
 	}
 }
 
+func InitPricesTable(db *sql.DB) error {
+	query := `
+	CREATE TABLE IF NOT EXISTS eth_prices (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		token_denom TEXT,
+		price_usd REAL NOT NULL,
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	_, err := db.Exec(query)
+	return err
+}
+
+func storePrice(db *sql.DB, price float64, denom string) error {
+	query := `INSERT INTO eth_prices (token_denom, price_usd) VALUES (?, ?);`
+	_, err := db.Exec(query, denom, price)
+	return err
+}
+
 func insertTransaction(db *sql.DB, tx Tx) error {
 	// Check if the transaction hash already exists
 	var exists int

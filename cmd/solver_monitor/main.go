@@ -92,8 +92,9 @@ func main() {
 	}
 	http.HttpServer(db, chainConfig)
 	
-	// Initialize the arbitrum TX fees database
+	// Initialize Databases
 	tx_fees.InitArbitrumTxFeesDB(db)
+	tx_fees.InitPricesTable(db)
 
 	// this can be done via subcommands
 	if *loadFromFile != "" {
@@ -117,12 +118,11 @@ func main() {
 		"solver address", *solverAddress,
 		"contract address", *contractAddress,
 		"interval", strconv.Itoa(*interval)}).Msg("monitor started")
-	// there's no do while loop in go, so we just run the orders once
-	
-	monitor.RunOrders(*solverAddress, *contractAddress, *saveRawResponses)
-	tx_fees.CollectAllTxFees(db, arbitrumSolverAddress)
 
-	
+	// Run once at startup (otherwise it waits the ticker interval before first run)
+	tx_fees.GetCoingeckoPrice(db)
+	tx_fees.CollectAllTxFees(db, arbitrumSolverAddress)
+	monitor.RunOrders(*solverAddress, *contractAddress, *saveRawResponses)
 
 	ticker := time.NewTicker(time.Duration(*interval) * time.Minute)
 	defer ticker.Stop()
@@ -133,6 +133,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
+			tx_fees.GetCoingeckoPrice(db)
 			tx_fees.CollectAllTxFees(db, arbitrumSolverAddress)
 			monitor.RunOrders(*solverAddress, *contractAddress, *saveRawResponses)
 		case <-sigs:

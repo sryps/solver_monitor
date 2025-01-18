@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"os"
+	"strconv"
 
 	"cosmossdk.io/x/tx/decode"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
@@ -95,6 +96,15 @@ func (m *Monitor) DecodeTxResponse(r *sdktypes.TxResponse) []FillOrderEnvelope {
 		if err := json.Unmarshal(exec.Msg.Bytes(), &fill); err != nil {
 			// types don't match -- skip
 			continue
+		}
+		if decodedTx.Tx.AuthInfo.SignerInfos != nil {
+			amount := decodedTx.Tx.AuthInfo.Fee.Amount[0].Amount
+			amountInt, err := strconv.ParseInt(amount, 10, 64)
+			if err != nil {
+				continue
+			}
+			fill.FillOrder.Order.FeeAmount.Amount = amountInt
+			fill.FillOrder.Order.FeeAmount.Denom = decodedTx.Tx.AuthInfo.Fee.Amount[0].Denom
 		}
 		fillOrders = append(fillOrders, fill)
 	}

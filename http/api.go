@@ -40,6 +40,9 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
 		log.Logger.Error().Msg("Failed to execute totalOrderFilled query")
 	}
 
+	// Calculate the success rate
+	rate := float32(totalOrderFilled) / float32(totalOrderCount)
+
 	// Query the database to get the total solver revenue
 	var totalRevenue int
 	err = db.QueryRow("SELECT SUM(solver_revenue) FROM tx_data WHERE source_domain = ? AND filler = ?", chainID, solverAddress).Scan(&totalRevenue)
@@ -50,6 +53,26 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
         }
         return
     }
+	revenue := float32(totalRevenue) / 1000000
+
+	var totalOsmoFees float32
+	err = db.QueryRow("SELECT SUM(fee_amount) FROM tx_data WHERE source_domain = ? AND filler = ?", chainID, solverAddress).Scan(&totalOsmoFees)
+    if err != nil {
+        if err == sql.ErrNoRows {
+			log.Logger.Error().Msg("No rows found")
+            return
+        }
+        return
+    }
+	osmoFees := float32(totalOsmoFees) / 1000000
+
+	// Osmo fees in USDC
+	var osmoPrice float32
+	err = db.QueryRow("SELECT price_usd FROM eth_prices WHERE token_denom = 'osmosis'").Scan(&osmoPrice)
+	if err != nil {
+		log.Logger.Error().Msg("Failed to execute osmoPrice query")
+	}
+	totalOsmoFeesUSD := osmoFees * osmoPrice
 
 	// Calculate all tx fees from Arbitrum
 	var totalArbitrumTxFees float32
@@ -59,8 +82,14 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
 	}
 	totalArbitrumTxFees = totalArbitrumTxFees / 1000000000000000000
 
-	rate := float32(totalOrderFilled) / float32(totalOrderCount)
-	revenue := float32(totalRevenue) / 1000000
+	// Arbitrum Eth fees in USDC
+	var ethPrice float32
+	err = db.QueryRow("SELECT price_usd FROM eth_prices WHERE token_denom = 'arbitrum'").Scan(&ethPrice)
+	if err != nil {
+		log.Logger.Error().Msg("Failed to execute osmoPrice query")
+	}
+	totalArbitrumTxFeesUSD := totalArbitrumTxFees * ethPrice
+
 
 	resp := ApiResponse{
 		SrcChain:     chainID,
@@ -68,7 +97,10 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
 		TotalOrders:  totalOrderCount,
 		TotalFilled:  totalOrderFilled,
 		TotalRevenueUSDC: revenue,
+		TotalOsmosisTxFeesUSD: totalOsmoFeesUSD,
+		TotalArbitrumTxFeesUSD: totalArbitrumTxFeesUSD,
 		TotalArbitrumTxFeesETH: totalArbitrumTxFees,
+		TotalOsmosisTxFeesOSMO: osmoFees,
 		SuccessRate:  rate,
 	}
 

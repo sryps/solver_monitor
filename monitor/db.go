@@ -15,6 +15,8 @@ type DbOrderFilled struct {
 	AmountOut          string    `json:"amount_out"`
 	SourceDomain       string    `json:"source_domain"`
 	SolverRevenue      int64     `json:"solver_revenue"`
+	FeeAmount		   int64     `json:"fee_amount"`
+	FeeDenom		   string    `json:"fee_denom"`
 	Height             int64     `json:"height"`
 	Code               int64     `json:"code"`
 	IngestionTimestamp time.Time `json:"ingestion_timestamp"`
@@ -37,6 +39,8 @@ func InitDB(db *sql.DB) {
 			amount_out INTEGER,
 			source_domain TEXT,
 			solver_revenue INTEGER,
+			fee_amount INTEGER,
+			fee_denom TEXT,
 			code INTEGER,
 			height INTEGER,
 			filler TEXT,
@@ -72,9 +76,9 @@ func (m *Monitor) InsertRawTxResponse(txResponse DbTxResponse) error {
 
 func (m *Monitor) InsertOrderFilled(order DbOrderFilled) error {
 	_, err := m.db.Exec(`
-		INSERT INTO tx_data (tx_hash, sender, amount_in, amount_out, source_domain, solver_revenue, height, code, filler, ingestion_timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, order.TxHash, order.Sender, order.AmountIn, order.AmountOut, order.SourceDomain, order.SolverRevenue, order.Height, order.Code, order.Filler, order.IngestionTimestamp)
+		INSERT INTO tx_data (tx_hash, sender, amount_in, amount_out, source_domain, solver_revenue, fee_amount, fee_denom, height, code, filler, ingestion_timestamp)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, order.TxHash, order.Sender, order.AmountIn, order.AmountOut, order.SourceDomain, order.SolverRevenue, order.FeeAmount, order.FeeDenom, order.Height, order.Code, order.Filler, order.IngestionTimestamp)
 	if err != nil {
 		return err
 	}
@@ -83,7 +87,7 @@ func (m *Monitor) InsertOrderFilled(order DbOrderFilled) error {
 
 func ReadOrdersFilled(db *sql.DB) []DbOrderFilled {
 	rows, err := db.Query(`
-		SELECT tx_hash, sender, amount_in, amount_out, source_domain, solver_revenue, height, code, filler, ingestion_timestamp
+		SELECT tx_hash, sender, amount_in, amount_out, source_domain, solver_revenue, fee_amount, fee_denom, height, code, filler, ingestion_timestamp
 		FROM tx_data
 	`)
 	if err != nil {
@@ -105,7 +109,7 @@ func ReadOrdersFilled(db *sql.DB) []DbOrderFilled {
 
 func ReadOrdersByFiller(db *sql.DB, filler string) []DbOrderFilled {
 	rows, err := db.Query(`
-		SELECT tx_hash, filler, amount_in, amount_out, source_domain, solver_revenue, height, code, ingestion_timestamp
+		SELECT tx_hash, sender, amount_in, amount_out, source_domain, solver_revenue, fee_amount, fee_denom, height, code, filler, ingestion_timestamp
 		FROM tx_data
 		WHERE filler = ?
 	`, filler)

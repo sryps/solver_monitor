@@ -156,6 +156,8 @@ func (m *Monitor) GetNewOrders(height int, contractAddress string) ([]DbOrderFil
 				AmountOut:          fillOrder.FillOrder.Order.AmountOut,
 				SourceDomain:       strconv.Itoa(int(fillOrder.FillOrder.Order.SourceDomain)),
 				SolverRevenue:      revenue.Int64(),
+				FeeAmount:          fillOrder.FillOrder.Order.FeeAmount.Amount,
+				FeeDenom:           fillOrder.FillOrder.Order.FeeAmount.Denom,
 				IngestionTimestamp: time.Now(),
 				Filler:             fillOrder.FillOrder.Filler,
 			})
@@ -313,7 +315,7 @@ func (m *Monitor) GetLatestHeight() int {
 	var height int
 	err := m.db.QueryRow("SELECT MAX(height) FROM tx_data").Scan(&height)
 	if err != nil {
-		m.logger.Error().Err(err).Msg("failed to get latest height")
+		m.logger.Error().Err(err).Msg("failed to get latest height or no data exists in DB")
 		return 0
 	}
 	return height
