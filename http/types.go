@@ -16,4 +16,5 @@ type ApiResponse struct {
 	TotalArbitrumTxFeesETH float32
 	TotalOsmosisTxFeesOSMO float32
 	SuccessRate float32
+	Profit float32
 }

@@ -102,6 +102,7 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
 		TotalArbitrumTxFeesETH: totalArbitrumTxFees,
 		TotalOsmosisTxFeesOSMO: osmoFees,
 		SuccessRate:  rate,
+		Profit: 	 revenue - totalOsmoFeesUSD - totalArbitrumTxFeesUSD,
 	}
 
 	// Send the response as JSON
