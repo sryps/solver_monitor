@@ -14,6 +14,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/msalopek/solver_monitor/http"
 	"github.com/msalopek/solver_monitor/monitor"
+	"github.com/msalopek/solver_monitor/tx_fees"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -21,10 +22,12 @@ import (
 const API_URL = "https://osmosis-lcd.quickapi.com"
 const defaultContractAddress = "osmo1vy34lpt5zlj797w7zqdta3qfq834kapx88qtgudy7jgljztj567s73ny82"
 const defaultSolverAddress = "osmo1xjuvq8mlmhc24l2ewya2uyyj9t6r0dcfdhza6h"
+const defaultArbitrumSolverAddress = "0x7166E00fFb1AA623847C52341b2D1f450e329494"
 
 func main() {
 	interval := flag.Int("interval", 1, "Polling interval in minutes")
 	solverAddress := flag.String("solver-address", defaultSolverAddress, "Solver address to monitor. This will be used to filter transactions.")
+	arbitrumSolverAddress := flag.String("arb-solver-address", defaultArbitrumSolverAddress, "Solver address to monitor. This will be used to filter transactions.")
 	contractAddress := flag.String("contract-address", defaultContractAddress, "Osmosis skip-go-fast contract address to monitor.")
 	logLevel := flag.String("log-level", "INFO", "Set the logging level")
 	logFormat := flag.String("log-format", "json", "Set the log output format")
@@ -82,12 +85,15 @@ func main() {
 
 	monitor := monitor.NewMonitor(db, cfg, &log.Logger, API_URL)
 
+	// Start the HTTP server
 	chainConfig := http.Chain{
 		ChainID: "osmosis-1",
 		SolverAddress: *solverAddress,
 	}
 	http.HttpServer(db, chainConfig)
 	
+	// Initialize the arbitrum TX fees database
+	tx_fees.InitArbitrumTxFeesDB(db)
 
 	// this can be done via subcommands
 	if *loadFromFile != "" {
@@ -112,7 +118,9 @@ func main() {
 		"contract address", *contractAddress,
 		"interval", strconv.Itoa(*interval)}).Msg("monitor started")
 	// there's no do while loop in go, so we just run the orders once
+	
 	monitor.RunOrders(*solverAddress, *contractAddress, *saveRawResponses)
+	tx_fees.CollectAllTxFees(db, arbitrumSolverAddress)
 
 	
 
@@ -125,6 +133,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
+			tx_fees.CollectAllTxFees(db, arbitrumSolverAddress)
 			monitor.RunOrders(*solverAddress, *contractAddress, *saveRawResponses)
 		case <-sigs:
 			log.Info().Msg("shutdown signal received")

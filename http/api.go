@@ -51,6 +51,13 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
         return
     }
 
+	// Calculate all tx fees from Arbitrum
+	var totalArbitrumTxFees float32
+	err = db.QueryRow("SELECT SUM(gas_cost) FROM arbitrum_txs").Scan(&totalArbitrumTxFees)
+	if err != nil {
+		log.Logger.Error().Msg("Failed to execute totalArbitrumTxFees query")
+	}
+	totalArbitrumTxFees = totalArbitrumTxFees / 1000000000000000000
 
 	rate := float32(totalOrderFilled) / float32(totalOrderCount)
 	revenue := float32(totalRevenue) / 1000000
@@ -61,6 +68,7 @@ func QueryHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, solverAddr
 		TotalOrders:  totalOrderCount,
 		TotalFilled:  totalOrderFilled,
 		TotalRevenueUSDC: revenue,
+		TotalArbitrumTxFeesETH: totalArbitrumTxFees,
 		SuccessRate:  rate,
 	}
 

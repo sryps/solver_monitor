@@ -11,5 +11,6 @@ type ApiResponse struct {
 	TotalOrders int
 	TotalFilled int
 	TotalRevenueUSDC float32
+	TotalArbitrumTxFeesETH float32
 	SuccessRate float32
 }
